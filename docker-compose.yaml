@@ -1,0 +1,23 @@
+version: "3.8"
+services:
+  cert-sync:
+    build: .
+    container_name: cert-sync
+    restart: always
+    user: "0"
+    entrypoint: ["/bin/bash", "-c", "while true; do python cert_sync.py; sleep ${SYNC_INTERVAL:-86400}; done"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - ALIBABA_CLOUD_ACCESS_KEY_ID=${ALIBABA_CLOUD_ACCESS_KEY_ID}
+      - ALIBABA_CLOUD_ACCESS_KEY_SECRET=${ALIBABA_CLOUD_ACCESS_KEY_SECRET}
+      - ALIBABA_CLOUD_REGION=cn-hangzhou
+      - CERT_DOMAIN=*.sisensing.com,*.sibionics.io
+      - SYNC_MODE=docker
+      - SYNC_INTERVAL=86400
+      # EMQX Cloud 配置
+      - EMQX_API_BASE=${EMQX_API_BASE:-https://cloud.emqx.com}
+      - EMQX_API_KEY=${EMQX_API_KEY}
+      - EMQX_API_SECRET=${EMQX_API_SECRET}
+      - EMQX_DEPLOYMENT_IDS=${EMQX_DEPLOYMENT_IDS}
+      - EMQX_CERT_DOMAIN=${EMQX_CERT_DOMAIN:-*.sisensing.com}

@@ -1,0 +1,90 @@
+# RBAC - ServiceAccount + 权限
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cert-sync
+  namespace: ops
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cert-sync
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cert-sync
+subjects:
+  - kind: ServiceAccount
+    name: cert-sync
+    namespace: ops
+roleRef:
+  kind: ClusterRole
+  name: cert-sync
+  apiGroup: rbac.authorization.k8s.io
+---
+# Secret - 阿里云 AK/SK
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cert-sync-aliyun
+  namespace: ops
+type: Opaque
+stringData:
+  access-key-id: "<your-access-key-id>"
+  access-key-secret: "<your-access-key-secret>"
+---
+# CronJob - 每天9点执行
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cert-sync
+  namespace: ops
+spec:
+  schedule: "0 9 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      template:
+        spec:
+          serviceAccountName: cert-sync
+          restartPolicy: OnFailure
+          containers:
+            - name: cert-sync
+              image: your-registry/cert-sync:latest
+              env:
+                - name: ALIBABA_CLOUD_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: cert-sync-aliyun
+                      key: access-key-id
+                - name: ALIBABA_CLOUD_ACCESS_KEY_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: cert-sync-aliyun
+                      key: access-key-secret
+                - name: ALIBABA_CLOUD_REGION
+                  value: "cn-hangzhou"
+                - name: CERT_DOMAIN
+                  value: "*.sisensing.com,*.sibionics.io"
+                - name: EXCLUDE_NAMESPACES
+                  value: "kube-system,kube-public,kube-node-lease"
+                - name: SYNC_MODE
+                  value: "k8s"
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+                limits:
+                  cpu: 200m
+                  memory: 256Mi
