@@ -131,4 +131,3 @@ def sync_emqx_cloud(certs_map):
             failed += 1
 
     return updated, skipped, failed
-

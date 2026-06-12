@@ -294,6 +294,20 @@ def sync_emqx(certs_map):
         return 0, 0, 0
 
 
+def sync_intl(certs_map):
+    """同步阿里云国际站证书"""
+    logger.info("[INTL] 开始同步...")
+    try:
+        from aliyun_intl_sync import sync_aliyun_intl
+        return sync_aliyun_intl(certs_map)
+    except ImportError:
+        logger.error("[INTL] aliyun_intl_sync 模块未找到")
+        return 0, 0, 0
+    except Exception as e:
+        logger.error(f"[INTL] 同步失败: {e}")
+        return 0, 0, 0
+
+
 def sync_certs():
     """主同步逻辑"""
     logger.info("=" * 50)
@@ -344,6 +358,16 @@ def sync_certs():
             total_failed += f
         except Exception as e:
             logger.error(f"[EMQX] 同步异常: {e}")
+
+    # 5. 阿里云国际站同步
+    if run_all or "intl" in SYNC_MODES:
+        try:
+            u, s, f = sync_intl(certs_map)
+            total_updated += u
+            total_skipped += s
+            total_failed += f
+        except Exception as e:
+            logger.error(f"[INTL] 同步异常: {e}")
 
     logger.info(f"全部同步完成: 更新={total_updated}, 跳过={total_skipped}, 失败={total_failed}")
 

@@ -8,6 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY cert_sync.py .
 COPY docker_nginx_sync.py .
 COPY emqx_cloud_sync.py .
+COPY aliyun_intl_sync.py .
 
 USER 1000
 
